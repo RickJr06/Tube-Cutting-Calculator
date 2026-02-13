@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tube Cutting Calculator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #434343 0%, #000000 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .section h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+            font-size: 14px;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .parts-container {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+        
+        .part-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: end;
+        }
+        
+        .part-row input {
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .part-row input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .remove-btn {
+            padding: 8px 12px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        .remove-btn:hover {
+            background: #c82333;
+        }
+        
+        .add-part-btn {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        .add-part-btn:hover {
+            background: #218838;
+        }
+        
+        .calculate-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .calculate-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .results {
+            margin-top: 30px;
+            display: none;
+        }
+        
+        .result-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #28a745;
+        }
+        
+        .result-card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        
+        .result-item {
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .result-item strong {
+            color: #667eea;
+            font-size: 18px;
+        }
+        
+        .breakdown {
+            margin-top: 15px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        
+        .breakdown-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .breakdown-item:last-child {
+            border-bottom: none;
+        }
+        
+        .yield-good {
+            color: #28a745;
+            font-weight: 600;
+        }
+        
+        .yield-medium {
+            color: #ffc107;
+            font-weight: 600;
+        }
+        
+        .yield-poor {
+            color: #dc3545;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 Tube Cutting Calculator</h1>
+            <p>Production-optimized nesting calculator for metal fabrication</p>
+        </div>
+        
+        <div class="content">
+            <div class="section">
+                <h2>Assembly Quantities</h2>
+                <div class="input-group">
+                    <label>Total Assembly Quantities (comma-separated)</label>
+                    <input type="text" id="assemblyQtys" placeholder="e.g., 2, 25, 50, 100" value="2, 25, 50, 100">
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>Stock Configuration</h2>
+                <div class="input-group">
+                    <label>Stock Length (inches)</label>
+                    <input type="number" id="stockLength" step="0.001" value="240">
+                </div>
+                <div class="input-group">
+                    <label>Kerf Width (inches)</label>
+                    <input type="number" id="kerfWidth" step="0.001" value="0.125">
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>Assembly Parts</h2>
+                <div class="parts-container" id="partsContainer">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; margin-bottom: 10px; font-weight: 600; font-size: 13px; color: #666;">
+                        <div>Part Name</div>
+                        <div>Cut Length (in)</div>
+                        <div>Qty per Assembly</div>
+                        <div></div>
+                    </div>
+                    <div class="part-row">
+                        <input type="text" placeholder="Part name" value="Leg (short)">
+                        <input type="number" step="0.001" placeholder="Length" value="16.75">
+                        <input type="number" placeholder="Quantity" value="2">
+                        <button class="remove-btn" onclick="removePart(this)">✕</button>
+                    </div>
+                    <div class="part-row">
+                        <input type="text" placeholder="Part name" value="Leg (long)">
+                        <input type="number" step="0.001" placeholder="Length" value="28">
+                        <input type="number" placeholder="Quantity" value="2">
+                        <button class="remove-btn" onclick="removePart(this)">✕</button>
+                    </div>
+                    <div class="part-row">
+                        <input type="text" placeholder="Part name" value="Seat">
+                        <input type="number" step="0.001" placeholder="Length" value="36">
+                        <input type="number" placeholder="Quantity" value="1">
+                        <button class="remove-btn" onclick="removePart(this)">✕</button>
+                    </div>
+                    <div class="part-row">
+                        <input type="text" placeholder="Part name" value="Back">
+                        <input type="number" step="0.001" placeholder="Length" value="28">
+                        <input type="number" placeholder="Quantity" value="1">
+                        <button class="remove-btn" onclick="removePart(this)">✕</button>
+                    </div>
+                </div>
+                <button class="add-part-btn" onclick="addPart()">+ Add Part</button>
+            </div>
+            
+            <button class="calculate-btn" onclick="calculate()">Calculate Tube Requirements</button>
+            
+            <div class="results" id="results"></div>
+        </div>
+    </div>
+    
+    <script>
+        function addPart() {
+            const container = document.getElementById('partsContainer');
+            const partRow = document.createElement('div');
+            partRow.className = 'part-row';
+            partRow.innerHTML = `
+                <input type="text" placeholder="Part name">
+                <input type="number" step="0.001" placeholder="Length">
+                <input type="number" placeholder="Quantity">
+                <button class="remove-btn" onclick="removePart(this)">✕</button>
+            `;
+            container.appendChild(partRow);
+        }
+        
+        function removePart(btn) {
+            const partRows = document.querySelectorAll('.part-row');
+            if (partRows.length > 1) {
+                btn.parentElement.remove();
+            } else {
+                alert('You must have at least one part defined.');
+            }
+        }
+        
+        function calculate() {
+            // Get inputs
+            const assemblyQtysInput = document.getElementById('assemblyQtys').value;
+            const stockLength = parseFloat(document.getElementById('stockLength').value);
+            const kerfWidth = parseFloat(document.getElementById('kerfWidth').value);
+            
+            // Parse assembly quantities
+            const assemblyQtys = assemblyQtysInput.split(',').map(q => parseInt(q.trim())).filter(q => !isNaN(q) && q > 0);
+            
+            if (assemblyQtys.length === 0) {
+                alert('Please enter valid assembly quantities.');
+                return;
+            }
+            
+            // Get parts
+            const partRows = document.querySelectorAll('.part-row');
+            const parts = [];
+            
+            for (let row of partRows) {
+                const inputs = row.querySelectorAll('input');
+                const name = inputs[0].value.trim() || 'Unnamed Part';
+                const length = parseFloat(inputs[1].value);
+                const qty = parseInt(inputs[2].value);
+                
+                if (isNaN(length) || isNaN(qty) || length <= 0 || qty <= 0) {
+                    alert('Please ensure all parts have valid lengths and quantities.');
+                    return;
+                }
+                
+                parts.push({ name, length, qty });
+            }
+            
+            // Calculate for each assembly quantity
+            const results = [];
+            
+            for (let assemblyQty of assemblyQtys) {
+                const result = calculateForQuantity(parts, assemblyQty, stockLength, kerfWidth);
+                results.push({ assemblyQty, ...result });
+            }
+            
+            // Display results
+            displayResults(results, stockLength);
+        }
+        
+        function calculateForQuantity(parts, assemblyQty, stockLength, kerfWidth) {
+            // Sort parts by length (longest first) for production efficiency
+            const sortedParts = [...parts].sort((a, b) => b.length - a.length);
+            
+            const breakdown = [];
+            let availableCutoffs = []; // Track cutoffs from previous parts
+            let totalTubesUsed = 0;
+            let totalMaterialCut = 0; // Actual material cut into parts
+            let totalKerfLost = 0; // Material lost to kerf
+            
+            // Process each part type
+            for (let part of sortedParts) {
+                const totalPiecesNeeded = part.qty * assemblyQty;
+                let piecesRemaining = totalPiecesNeeded;
+                let tubesUsedForThisPart = 0;
+                let piecesCutFromCutoffs = 0;
+                
+                // Check if part is too long
+                if (part.length > stockLength) {
+                    breakdown.push({
+                        partName: part.name,
+                        partLength: part.length,
+                        totalPieces: totalPiecesNeeded,
+                        tubesUsed: 0,
+                        error: 'Part is too long for stock length!'
+                    });
+                    continue;
+                }
+                
+                // First, try to cut from available cutoffs
+                const updatedCutoffs = [];
+                for (let cutoff of availableCutoffs) {
+                    // Only use this cutoff if it's long enough for at least one piece
+                    if (cutoff.length >= part.length + kerfWidth && piecesRemaining > 0) {
+                        // Cut as many pieces as possible from this cutoff
+                        while (cutoff.length >= part.length + kerfWidth && piecesRemaining > 0) {
+                            piecesRemaining--;
+                            piecesCutFromCutoffs++;
+                            totalMaterialCut += part.length;
+                            totalKerfLost += kerfWidth;
+                            cutoff.length -= (part.length + kerfWidth);
+                        }
+                    }
+                    
+                    // Keep cutoff if it still has some length
+                    if (cutoff.length > 0) {
+                        updatedCutoffs.push(cutoff);
+                    }
+                }
+                availableCutoffs = updatedCutoffs;
+                
+                // Then cut from new tubes as needed
+                let newCutoffsFromThisPart = [];
+                if (piecesRemaining > 0) {
+                    const piecesPerNewTube = Math.floor(stockLength / (part.length + kerfWidth));
+                    tubesUsedForThisPart = Math.ceil(piecesRemaining / piecesPerNewTube);
+                    
+                    // Calculate actual pieces cut from new tubes
+                    for (let t = 0; t < tubesUsedForThisPart; t++) {
+                        let tubeRemaining = stockLength;
+                        let piecesCutFromThisTube = 0;
+                        
+                        while (tubeRemaining >= part.length + kerfWidth && piecesRemaining > 0) {
+                            piecesRemaining--;
+                            piecesCutFromThisTube++;
+                            totalMaterialCut += part.length;
+                            totalKerfLost += kerfWidth;
+                            tubeRemaining -= (part.length + kerfWidth);
+                        }
+                        
+                        // Store cutoff for potential use
+                        if (tubeRemaining > 0) {
+                            newCutoffsFromThisPart.push({ length: tubeRemaining, fromPart: part.name });
+                        }
+                    }
+                }
+                
+                totalTubesUsed += tubesUsedForThisPart;
+                availableCutoffs.push(...newCutoffsFromThisPart);
+                
+                breakdown.push({
+                    partName: part.name,
+                    partLength: part.length,
+                    totalPieces: totalPiecesNeeded,
+                    piecesCutFromCutoffs: piecesCutFromCutoffs,
+                    tubesUsed: tubesUsedForThisPart,
+                    newCutoffs: newCutoffsFromThisPart
+                });
+            }
+            
+            const totalMaterialAvailable = totalTubesUsed * stockLength;
+            
+            // All remaining cutoffs are scrap since there are no more parts to cut
+            const scrapCutoffs = availableCutoffs;
+            const totalScrap = scrapCutoffs.reduce((sum, cutoff) => sum + cutoff.length, 0);
+            const yieldPercentage = totalMaterialAvailable > 0 ? (totalMaterialCut / totalMaterialAvailable) * 100 : 0;
+            
+            return {
+                totalTubesUsed,
+                totalMaterialCut,
+                totalMaterialAvailable,
+                totalKerfLost,
+                totalScrap,
+                yieldPercentage,
+                breakdown,
+                scrapCutoffs
+            };
+        }
+        
+        function displayResults(results, stockLength) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<h2 style="margin-bottom: 20px; color: #333;">Calculation Results</h2>';
+            
+            for (let result of results) {
+                const yieldClass = result.yieldPercentage >= 80 ? 'yield-good' : 
+                                   result.yieldPercentage >= 60 ? 'yield-medium' : 'yield-poor';
+                
+                let breakdownHTML = '';
+                for (let item of result.breakdown) {
+                    if (item.error) {
+                        breakdownHTML += `
+                            <div class="breakdown-item">
+                                <strong>${item.partName}</strong> (${item.partLength}") - <span style="color: #dc3545;">${item.error}</span>
+                            </div>
+                        `;
+                    } else {
+                        const cutoffInfo = item.newCutoffs.length > 0 
+                            ? `• New cutoffs created: ${item.newCutoffs.length} pieces (${item.newCutoffs.map(c => c.length.toFixed(2) + '"').join(', ')})<br>`
+                            : '';
+                        
+                        const fromCutoffsInfo = item.piecesCutFromCutoffs > 0
+                            ? `• Pieces cut from previous cutoffs: ${item.piecesCutFromCutoffs}<br>`
+                            : '';
+                        
+                        breakdownHTML += `
+                            <div class="breakdown-item">
+                                <strong>${item.partName}</strong> (${item.partLength}")<br>
+                                • Total pieces needed: ${item.totalPieces}<br>
+                                ${fromCutoffsInfo}
+                                • New tubes required: ${item.tubesUsed}<br>
+                                ${cutoffInfo}
+                            </div>
+                        `;
+                    }
+                }
+                
+                // Final cutoff summary - group by length for easier reading
+                let finalCutoffHTML = '';
+                if (result.scrapCutoffs && result.scrapCutoffs.length > 0) {
+                    // Group scrap by length (rounded to 2 decimals)
+                    const scrapGroups = {};
+                    result.scrapCutoffs.forEach(cutoff => {
+                        const length = cutoff.length.toFixed(2);
+                        if (!scrapGroups[length]) {
+                            scrapGroups[length] = {
+                                length: length,
+                                count: 0,
+                                fromParts: new Set()
+                            };
+                        }
+                        scrapGroups[length].count++;
+                        scrapGroups[length].fromParts.add(cutoff.fromPart);
+                    });
+                    
+                    // Sort by length descending
+                    const sortedGroups = Object.values(scrapGroups).sort((a, b) => parseFloat(b.length) - parseFloat(a.length));
+                    const scrapList = sortedGroups.map(g => {
+                        const fromPartsStr = Array.from(g.fromParts).join(', ');
+                        return `${g.count} × ${g.length}" (from ${fromPartsStr})`;
+                    }).join('<br>');
+                    
+                    finalCutoffHTML += `
+                        <div class="breakdown-item" style="background: #f8d7da; border-left: 3px solid #dc3545;">
+                            <strong>Scrap Cutoffs:</strong><br>
+                            ${scrapList}<br>
+                            <em>Total scrap: ${result.totalScrap.toFixed(2)}"</em>
+                        </div>
+                    `;
+                } else if (result.totalScrap === 0) {
+                    finalCutoffHTML += `
+                        <div class="breakdown-item" style="background: #d4edda; border-left: 3px solid #28a745;">
+                            <strong>✓ No scrap - perfect nesting!</strong>
+                        </div>
+                    `;
+                }
+                
+                resultsDiv.innerHTML += `
+                    <div class="result-card">
+                        <h3>${result.assemblyQty} Assemblies</h3>
+                        <div class="result-item">
+                            <span>Total Tubes Required:</span>
+                            <strong>${result.totalTubesUsed}</strong>
+                        </div>
+                        <div class="result-item">
+                            <span>Tube Yield:</span>
+                            <strong class="${yieldClass}">${result.yieldPercentage.toFixed(1)}%</strong>
+                        </div>
+                        <div class="result-item">
+                            <span>Material Cut into Parts:</span>
+                            <span>${result.totalMaterialCut.toFixed(2)}" of ${result.totalMaterialAvailable.toFixed(2)}"</span>
+                        </div>
+                        <div class="result-item">
+                            <span>Lost to Kerf:</span>
+                            <span>${result.totalKerfLost.toFixed(2)}"</span>
+                        </div>
+                        <div class="result-item">
+                            <span>Scrap Cutoffs:</span>
+                            <span>${result.totalScrap.toFixed(2)}"</span>
+                        </div>
+                        <div class="breakdown">
+                            <strong style="display: block; margin-bottom: 10px;">Cut Plan (longest to shortest):</strong>
+                            ${breakdownHTML}
+                            ${finalCutoffHTML}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            resultsDiv.style.display = 'block';
+            resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    </script>
+</body>
+</html>
