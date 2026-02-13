@@ -257,6 +257,14 @@
                     <label>Kerf Width (inches)</label>
                     <input type="number" id="kerfWidth" step="0.001" value="0.125">
                 </div>
+                <div class="input-group">
+                    <label>Tube Trim Length (inches) - trimmed before first cut</label>
+                    <input type="number" id="trimLength" step="0.001" value="0">
+                </div>
+                <div class="input-group">
+                    <label>Clamp Length (inches) - unusable length for clamping</label>
+                    <input type="number" id="clampLength" step="0.001" value="0">
+                </div>
             </div>
             
             <div class="section">
@@ -330,6 +338,8 @@
             const assemblyQtysInput = document.getElementById('assemblyQtys').value;
             const stockLength = parseFloat(document.getElementById('stockLength').value);
             const kerfWidth = parseFloat(document.getElementById('kerfWidth').value);
+            const trimLength = parseFloat(document.getElementById('trimLength').value) || 0;
+            const clampLength = parseFloat(document.getElementById('clampLength').value) || 0;
             
             // Parse assembly quantities
             const assemblyQtys = assemblyQtysInput.split(',').map(q => parseInt(q.trim())).filter(q => !isNaN(q) && q > 0);
@@ -361,15 +371,15 @@
             const results = [];
             
             for (let assemblyQty of assemblyQtys) {
-                const result = calculateForQuantity(parts, assemblyQty, stockLength, kerfWidth);
+                const result = calculateForQuantity(parts, assemblyQty, stockLength, kerfWidth, trimLength, clampLength);
                 results.push({ assemblyQty, ...result });
             }
             
             // Display results
-            displayResults(results, stockLength);
+            displayResults(results, stockLength, trimLength, clampLength);
         }
         
-        function calculateForQuantity(parts, assemblyQty, stockLength, kerfWidth) {
+        function calculateForQuantity(parts, assemblyQty, stockLength, kerfWidth, trimLength, clampLength) {
             // Sort parts by length (longest first) for production efficiency
             const sortedParts = [...parts].sort((a, b) => b.length - a.length);
             
@@ -378,6 +388,8 @@
             let totalTubesUsed = 0;
             let totalMaterialCut = 0; // Actual material cut into parts
             let totalKerfLost = 0; // Material lost to kerf
+            let totalTrimLost = 0; // Material lost to trimming
+            let totalClampWaste = 0; // Material wasted for clamping
             
             // Process each part type
             for (let part of sortedParts) {
@@ -385,15 +397,16 @@
                 let piecesRemaining = totalPiecesNeeded;
                 let tubesUsedForThisPart = 0;
                 let piecesCutFromCutoffs = 0;
+                let trimLostThisPart = 0;
                 
                 // Check if part is too long
-                if (part.length > stockLength) {
+                if (part.length > stockLength - trimLength - clampLength) {
                     breakdown.push({
                         partName: part.name,
                         partLength: part.length,
                         totalPieces: totalPiecesNeeded,
                         tubesUsed: 0,
-                        error: 'Part is too long for stock length!'
+                        error: 'Part is too long for effective stock length!'
                     });
                     continue;
                 }
@@ -401,16 +414,25 @@
                 // First, try to cut from available cutoffs
                 const updatedCutoffs = [];
                 for (let cutoff of availableCutoffs) {
+                    // Calculate effective length of cutoff (must trim before first cut)
+                    let effectiveLength = cutoff.length - trimLength - clampLength;
+                    
                     // Only use this cutoff if it's long enough for at least one piece
-                    if (cutoff.length >= part.length + kerfWidth && piecesRemaining > 0) {
+                    if (effectiveLength >= part.length + kerfWidth && piecesRemaining > 0) {
+                        // Account for trim on first cut from this cutoff
+                        trimLostThisPart += trimLength;
+                        
                         // Cut as many pieces as possible from this cutoff
-                        while (cutoff.length >= part.length + kerfWidth && piecesRemaining > 0) {
+                        while (effectiveLength >= part.length + kerfWidth && piecesRemaining > 0) {
                             piecesRemaining--;
                             piecesCutFromCutoffs++;
                             totalMaterialCut += part.length;
                             totalKerfLost += kerfWidth;
-                            cutoff.length -= (part.length + kerfWidth);
+                            effectiveLength -= (part.length + kerfWidth);
                         }
+                        
+                        // Store remaining cutoff length (includes clamp length that couldn't be used)
+                        cutoff.length = effectiveLength + clampLength;
                     }
                     
                     // Keep cutoff if it still has some length
@@ -423,30 +445,40 @@
                 // Then cut from new tubes as needed
                 let newCutoffsFromThisPart = [];
                 if (piecesRemaining > 0) {
-                    const piecesPerNewTube = Math.floor(stockLength / (part.length + kerfWidth));
+                    // Calculate effective length of new tube
+                    const effectiveStockLength = stockLength - trimLength - clampLength;
+                    const piecesPerNewTube = Math.floor(effectiveStockLength / (part.length + kerfWidth));
                     tubesUsedForThisPart = Math.ceil(piecesRemaining / piecesPerNewTube);
                     
                     // Calculate actual pieces cut from new tubes
                     for (let t = 0; t < tubesUsedForThisPart; t++) {
-                        let tubeRemaining = stockLength;
+                        // Account for trim on first cut from new tube
+                        trimLostThisPart += trimLength;
+                        
+                        let effectiveRemaining = effectiveStockLength;
                         let piecesCutFromThisTube = 0;
                         
-                        while (tubeRemaining >= part.length + kerfWidth && piecesRemaining > 0) {
+                        while (effectiveRemaining >= part.length + kerfWidth && piecesRemaining > 0) {
                             piecesRemaining--;
                             piecesCutFromThisTube++;
                             totalMaterialCut += part.length;
                             totalKerfLost += kerfWidth;
-                            tubeRemaining -= (part.length + kerfWidth);
+                            effectiveRemaining -= (part.length + kerfWidth);
                         }
                         
-                        // Store cutoff for potential use
-                        if (tubeRemaining > 0) {
-                            newCutoffsFromThisPart.push({ length: tubeRemaining, fromPart: part.name });
+                        // Store cutoff for potential use (includes clamp length)
+                        const cutoffLength = effectiveRemaining + clampLength;
+                        if (cutoffLength > 0) {
+                            newCutoffsFromThisPart.push({ length: cutoffLength, fromPart: part.name });
                         }
+                        
+                        // Track clamp waste from this tube
+                        totalClampWaste += clampLength;
                     }
                 }
                 
                 totalTubesUsed += tubesUsedForThisPart;
+                totalTrimLost += trimLostThisPart;
                 availableCutoffs.push(...newCutoffsFromThisPart);
                 
                 breakdown.push({
@@ -455,6 +487,7 @@
                     totalPieces: totalPiecesNeeded,
                     piecesCutFromCutoffs: piecesCutFromCutoffs,
                     tubesUsed: tubesUsedForThisPart,
+                    trimLost: trimLostThisPart,
                     newCutoffs: newCutoffsFromThisPart
                 });
             }
@@ -471,6 +504,8 @@
                 totalMaterialCut,
                 totalMaterialAvailable,
                 totalKerfLost,
+                totalTrimLost,
+                totalClampWaste,
                 totalScrap,
                 yieldPercentage,
                 breakdown,
@@ -478,9 +513,16 @@
             };
         }
         
-        function displayResults(results, stockLength) {
+        function displayResults(results, stockLength, trimLength, clampLength) {
             const resultsDiv = document.getElementById('results');
-            resultsDiv.innerHTML = '<h2 style="margin-bottom: 20px; color: #333;">Calculation Results</h2>';
+            const effectiveLength = stockLength - trimLength - clampLength;
+            resultsDiv.innerHTML = `
+                <h2 style="margin-bottom: 20px; color: #333;">Calculation Results</h2>
+                <div style="background: #e7f3ff; padding: 15px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #2196F3;">
+                    <strong>Effective Stock Length:</strong> ${effectiveLength.toFixed(2)}" 
+                    (${stockLength}" - ${trimLength}" trim - ${clampLength}" clamp)
+                </div>
+            `;
             
             for (let result of results) {
                 const yieldClass = result.yieldPercentage >= 80 ? 'yield-good' : 
@@ -503,12 +545,17 @@
                             ? `• Pieces cut from previous cutoffs: ${item.piecesCutFromCutoffs}<br>`
                             : '';
                         
+                        const trimInfo = item.trimLost > 0
+                            ? `• Material trimmed: ${item.trimLost.toFixed(2)}"<br>`
+                            : '';
+                        
                         breakdownHTML += `
                             <div class="breakdown-item">
                                 <strong>${item.partName}</strong> (${item.partLength}")<br>
                                 • Total pieces needed: ${item.totalPieces}<br>
                                 ${fromCutoffsInfo}
                                 • New tubes required: ${item.tubesUsed}<br>
+                                ${trimInfo}
                                 ${cutoffInfo}
                             </div>
                         `;
@@ -571,8 +618,16 @@
                             <span>${result.totalMaterialCut.toFixed(2)}" of ${result.totalMaterialAvailable.toFixed(2)}"</span>
                         </div>
                         <div class="result-item">
+                            <span>Lost to Trim:</span>
+                            <span>${result.totalTrimLost.toFixed(2)}"</span>
+                        </div>
+                        <div class="result-item">
                             <span>Lost to Kerf:</span>
                             <span>${result.totalKerfLost.toFixed(2)}"</span>
+                        </div>
+                        <div class="result-item">
+                            <span>Clamp Waste:</span>
+                            <span>${result.totalClampWaste.toFixed(2)}"</span>
                         </div>
                         <div class="result-item">
                             <span>Scrap Cutoffs:</span>
